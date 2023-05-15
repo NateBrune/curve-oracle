@@ -9,11 +9,13 @@ import "forge-std/console.sol";
 
 contract CurveLinkOracleTwoTokensTest is Test {
     CurveOracleTwoVolTokens public oracle;
-    address testPool = 0x941Eb6F616114e4Ecaa85377945EA306002612FE;
+    address testPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    mapping (address => bool) lpToken;
 
     function setUp() public {
         
         address registry = 0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf;
+        lpToken[0xDC24316b9AE028F1497c275EB9192a3Ea0f67022] = true;
         
         oracle = new CurveOracleTwoVolTokens(registry);
     }
@@ -30,7 +32,17 @@ contract CurveLinkOracleTwoTokensTest is Test {
     }
 
     function testPrice() public {
-        IERC20Metadata token = IERC20Metadata(ICurveFi_SwapY(testPool).token());
+        IERC20Metadata token;
+        console.log("lp_token", ICurveFi_SwapY(testPool).lp_token());
+        console.log("lpToken[testPool]", lpToken[testPool]);
+        if(lpToken[testPool]){
+            token = IERC20Metadata(ICurveFi_SwapY(testPool).lp_token());
+        } else {
+            //token = IERC20Metadata(ICurveFi_SwapY(testPool).token());
+        }
+        
+        
+        
 
         uint256 couple = token.totalSupply(); //uint256(204049) * (uint256(10) ** uint256(18));
 

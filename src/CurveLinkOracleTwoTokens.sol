@@ -11,13 +11,13 @@ pragma solidity ^0.8.19;
 contract CurveOracleTwoVolTokens {
     ICurveFi_SwapY public pool; //ICurveFi_SwapY(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4);
     address public immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    //AggregatorInterface public immutable wethOracle = AggregatorInterface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-    //address public immutable cvx = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-    //AggregatorInterface public immutable cvxOracle = AggregatorInterface(0xd962fC30A72A84cE50161031391756Bf2876Af5D);
+    address public immutable eth = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    mapping (address => bool) useLpToken;
     IERC20Metadata public poolToken;
     FeedRegistryInterface public registry;
     constructor(address _registry){
         registry = FeedRegistryInterface(_registry);
+        useLpToken[0xDC24316b9AE028F1497c275EB9192a3Ea0f67022] = true;
         //pool = ICurveFi_SwapY(_pool);
         //poolToken = IERC20Metadata(pool.token());
 
@@ -48,10 +48,10 @@ contract CurveOracleTwoVolTokens {
         IERC20Metadata coin1 = IERC20Metadata(pool.coins(1));
         int256 coin0Price = 0;
         int256 coin1Price = 0;
-        if(address(coin0) == weth){
+        if(address(coin0) == weth || address(coin0) == eth ){
             coin0Price = getPrice(Denominations.ETH, Denominations.USD);
             coin1Price = getPrice(address(coin1), Denominations.USD);
-        } else if (address(coin1) == weth){
+        } else if (address(coin1) == weth || address(coin1) == eth){
             coin0Price = getPrice(address(coin0), Denominations.USD);
             coin1Price = getPrice(Denominations.ETH, Denominations.USD);
         } else {
@@ -66,6 +66,12 @@ contract CurveOracleTwoVolTokens {
         } else if (address(coin1) == weth){
             wethTvl = (uint256(coin1Price) * bal1) / (uint256(10) ** uint256(coin1.decimals()));
             otherTvl = (uint256(coin0Price) * bal0) / (uint256(10) ** uint256(coin0.decimals()));
+        } else if(address(coin0) == eth) {
+            wethTvl = (uint256(coin0Price) * bal0) / (uint256(10) ** uint256(18));
+            otherTvl = (uint256(coin1Price) * bal1) / (uint256(10) ** uint256(coin1.decimals()));
+        } else if(address(coin1) == eth){
+            wethTvl = (uint256(coin1Price) * bal1) / (uint256(10) ** uint256(18));
+            otherTvl = (uint256(coin0Price) * bal0) / (uint256(10) ** uint256(coin0.decimals()));
         } else {
             revert("!WETH");
         }
@@ -74,7 +80,13 @@ contract CurveOracleTwoVolTokens {
 
     function lpToUSD(uint256 _lpAmount, address _pool) public view returns (uint256){
         ICurveFi_SwapY pool = ICurveFi_SwapY(_pool);
-        IERC20Metadata token = IERC20Metadata(pool.token());
+        IERC20Metadata token;
+        if(useLpToken[_pool]){
+            token = IERC20Metadata(pool.lp_token());
+        } else {
+            token = IERC20Metadata(pool.token());
+        }
+        
         uint256 totalSupply = token.totalSupply();
         uint256 PRECISION = uint256(10) ** uint256(18);
         uint256 percent = _lpAmount * PRECISION / totalSupply;
