@@ -13,11 +13,13 @@ contract CurveOracleTwoVolTokens {
     address public immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public immutable eth = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     mapping (address => bool) useLpToken;
+    mapping (address => bool) isConcentrated;
     IERC20Metadata public poolToken;
     FeedRegistryInterface public registry;
     constructor(address _registry){
         registry = FeedRegistryInterface(_registry);
         useLpToken[0xDC24316b9AE028F1497c275EB9192a3Ea0f67022] = true;
+        isConcentrated[0x828b154032950C8ff7CF8085D841723Db2696056] = true;
         //pool = ICurveFi_SwapY(_pool);
         //poolToken = IERC20Metadata(pool.token());
 
@@ -83,8 +85,10 @@ contract CurveOracleTwoVolTokens {
         IERC20Metadata token;
         if(useLpToken[_pool]){
             token = IERC20Metadata(pool.lp_token());
-        } else {
+        } else if(!isConcentrated[_pool]) {
             token = IERC20Metadata(pool.token());
+        } else {
+            token = IERC20Metadata(_pool);
         }
         
         uint256 totalSupply = token.totalSupply();
